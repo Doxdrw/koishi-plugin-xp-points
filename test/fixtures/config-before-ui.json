@@ -1,0 +1,427 @@
+{
+  "schema": {
+    "type": "object",
+    "dict": {
+      "accountDefaults": {
+        "type": "object",
+        "meta": {
+          "default": {
+            "mode": "shared",
+            "combineStrategy": "maximum"
+          }
+        },
+        "dict": {
+          "combineStrategy": {
+            "type": "union",
+            "meta": {
+              "default": "maximum"
+            },
+            "list": [
+              {
+                "type": "const",
+                "meta": {
+                  "required": true
+                },
+                "value": "maximum"
+              },
+              {
+                "type": "const",
+                "meta": {
+                  "required": true
+                },
+                "value": "sum"
+              }
+            ]
+          },
+          "mode": {
+            "type": "union",
+            "meta": {
+              "default": "shared"
+            },
+            "list": [
+              {
+                "type": "const",
+                "meta": {
+                  "required": true
+                },
+                "value": "shared"
+              },
+              {
+                "type": "const",
+                "meta": {
+                  "required": true
+                },
+                "value": "independent"
+              }
+            ]
+          }
+        }
+      },
+      "leaderboardEntriesPerLine": {
+        "type": "number",
+        "meta": {
+          "default": 3,
+          "max": 5,
+          "min": 1,
+          "step": 1
+        }
+      },
+      "leaderboardInactivePolicy": {
+        "type": "union",
+        "meta": {
+          "default": "hide"
+        },
+        "list": [
+          {
+            "type": "const",
+            "value": "hide"
+          },
+          {
+            "type": "const",
+            "value": "show"
+          }
+        ]
+      },
+      "leaderboardPageSize": {
+        "type": "number",
+        "meta": {
+          "default": 50,
+          "max": 200,
+          "min": 10,
+          "step": 1
+        }
+      },
+      "memberScanPreviewLimit": {
+        "type": "number",
+        "meta": {
+          "default": 100,
+          "max": 1000,
+          "min": 10,
+          "step": 1
+        }
+      },
+      "nicknameConsumers": {
+        "type": "object",
+        "meta": {
+          "default": {
+            "chatluna": {
+              "enabled": false,
+              "guilds": [],
+              "includePrivate": false
+            },
+            "chatlunaCharacter": {
+              "enabled": false,
+              "guilds": [],
+              "includePrivate": false
+            }
+          }
+        },
+        "dict": {
+          "chatluna": {
+            "type": "object",
+            "meta": {
+              "default": {
+                "enabled": false,
+                "guilds": [],
+                "includePrivate": false
+              }
+            },
+            "dict": {
+              "enabled": {
+                "type": "boolean",
+                "meta": {
+                  "default": false
+                }
+              },
+              "guilds": {
+                "type": "array",
+                "meta": {
+                  "default": []
+                },
+                "inner": {
+                  "type": "string"
+                }
+              },
+              "includePrivate": {
+                "type": "boolean",
+                "meta": {
+                  "default": false
+                }
+              }
+            }
+          },
+          "chatlunaCharacter": {
+            "type": "object",
+            "meta": {
+              "default": {
+                "enabled": false,
+                "guilds": [],
+                "includePrivate": false
+              }
+            },
+            "dict": {
+              "enabled": {
+                "type": "boolean",
+                "meta": {
+                  "default": false
+                }
+              },
+              "guilds": {
+                "type": "array",
+                "meta": {
+                  "default": []
+                },
+                "inner": {
+                  "type": "string"
+                }
+              },
+              "includePrivate": {
+                "type": "boolean",
+                "meta": {
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "requiredDeletionConsumers": {
+        "type": "array",
+        "meta": {
+          "default": []
+        },
+        "inner": {
+          "type": "string"
+        }
+      },
+      "scoreCommandBindings": {
+        "type": "array",
+        "meta": {
+          "default": []
+        },
+        "inner": {
+          "type": "object",
+          "dict": {
+            "addSelf": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "addTarget": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "leaderboard": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "query": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "setSelf": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "setTarget": {
+              "type": "array",
+              "meta": {
+                "default": []
+              },
+              "inner": {
+                "type": "string"
+              }
+            },
+            "systemKey": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "scoreGuildAliases": {
+        "type": "dict",
+        "meta": {
+          "default": {}
+        },
+        "inner": {
+          "type": "dict",
+          "meta": {
+            "default": {}
+          },
+          "inner": {
+            "type": "dict",
+            "meta": {
+              "default": {}
+            },
+            "inner": {
+              "type": "string"
+            },
+            "sKey": {
+              "type": "string"
+            }
+          },
+          "sKey": {
+            "type": "string"
+          }
+        },
+        "sKey": {
+          "type": "string"
+        }
+      },
+      "scorePeriods": {
+        "type": "dict",
+        "meta": {
+          "default": {}
+        },
+        "inner": {
+          "type": "object",
+          "dict": {
+            "season": {
+              "type": "object",
+              "dict": {
+                "length": {
+                  "type": "number",
+                  "meta": {
+                    "default": 1,
+                    "max": 3660,
+                    "min": 1,
+                    "step": 1
+                  }
+                },
+                "start": {
+                  "type": "string",
+                  "meta": {
+                    "default": "1970-01-01"
+                  }
+                },
+                "unit": {
+                  "type": "union",
+                  "meta": {
+                    "default": "month"
+                  },
+                  "list": [
+                    {
+                      "type": "const",
+                      "meta": {
+                        "required": true
+                      },
+                      "value": "month"
+                    },
+                    {
+                      "type": "const",
+                      "meta": {
+                        "required": true
+                      },
+                      "value": "day"
+                    }
+                  ]
+                }
+              }
+            },
+            "timeZone": {
+              "type": "string",
+              "meta": {
+                "default": "Asia/Shanghai"
+              }
+            }
+          }
+        },
+        "sKey": {
+          "type": "string"
+        }
+      },
+      "scoreSystems": {
+        "type": "array",
+        "meta": {
+          "default": []
+        },
+        "inner": {
+          "type": "object",
+          "dict": {
+            "key": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "scope": {
+              "type": "union",
+              "list": [
+                {
+                  "type": "const",
+                  "value": "global"
+                },
+                {
+                  "type": "const",
+                  "value": "platform"
+                },
+                {
+                  "type": "const",
+                  "value": "guild"
+                }
+              ]
+            },
+            "unit": {
+              "type": "string",
+              "meta": {
+                "default": "分"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "defaults": {
+    "scorePeriods": {},
+    "accountDefaults": {
+      "mode": "shared",
+      "combineStrategy": "maximum"
+    },
+    "scoreSystems": [],
+    "scoreCommandBindings": [],
+    "scoreGuildAliases": {},
+    "leaderboardInactivePolicy": "hide",
+    "requiredDeletionConsumers": [],
+    "leaderboardPageSize": 50,
+    "leaderboardEntriesPerLine": 3,
+    "memberScanPreviewLimit": 100,
+    "nicknameConsumers": {
+      "chatluna": {
+        "enabled": false,
+        "guilds": [],
+        "includePrivate": false
+      },
+      "chatlunaCharacter": {
+        "enabled": false,
+        "guilds": [],
+        "includePrivate": false
+      }
+    }
+  },
+  "emptySimplified": null
+}

@@ -1,0 +1,143 @@
+{
+  "name": "koishi-plugin-xp-points",
+  "description": "管理员治理的统一身份与多积分账本服务",
+  "version": "0.2.0",
+  "author": "Doxdrw <272593690@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Doxdrw/koishi-plugin-xp-points.git"
+  },
+  "homepage": "https://github.com/Doxdrw/koishi-plugin-xp-points#readme",
+  "bugs": {
+    "url": "https://github.com/Doxdrw/koishi-plugin-xp-points/issues"
+  },
+  "main": "lib/plugin.js",
+  "typings": "lib/plugin.d.ts",
+  "bin": {
+    "xp-points-guild-remap": "scripts/score-guild-remap.mjs"
+  },
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "public:check": "node scripts/export-public.mjs --check",
+    "package:audit": "node scripts/package-audit.mjs"
+  },
+  "files": [
+    "lib/errors.js",
+    "lib/errors.d.ts",
+    "lib/period-calendar.js",
+    "lib/period-calendar.d.ts",
+    "lib/period-model.js",
+    "lib/period-model.d.ts",
+    "lib/period-ledger.js",
+    "lib/period-ledger.d.ts",
+    "lib/period-conversion.js",
+    "lib/period-conversion.d.ts",
+    "lib/command-catalog.js",
+    "lib/command-catalog.d.ts",
+    "lib/account-association-policy.js",
+    "lib/account-association-policy.d.ts",
+    "lib/account-association.js",
+    "lib/account-association.d.ts",
+    "lib/account-commands.js",
+    "lib/account-commands.d.ts",
+    "lib/account-conversion.js",
+    "lib/account-conversion.d.ts",
+    "lib/account-deletion.js",
+    "lib/account-deletion.d.ts",
+    "lib/account-display.js",
+    "lib/account-display.d.ts",
+    "lib/account-interactions.js",
+    "lib/account-interactions.d.ts",
+    "lib/account-lifecycle.js",
+    "lib/account-lifecycle.d.ts",
+    "lib/account-maintenance.js",
+    "lib/account-maintenance.d.ts",
+    "lib/account-mode.js",
+    "lib/account-mode.d.ts",
+    "lib/account-model.js",
+    "lib/account-model.d.ts",
+    "lib/account-operations.js",
+    "lib/account-operations.d.ts",
+    "lib/account-policy.js",
+    "lib/account-policy.d.ts",
+    "lib/account-queries.js",
+    "lib/account-queries.d.ts",
+    "lib/account-storage.js",
+    "lib/account-storage.d.ts",
+    "lib/erased-operation.js",
+    "lib/erased-operation.d.ts",
+    "lib/subject-ledger.js",
+    "lib/subject-ledger.d.ts",
+    "lib/core.js",
+    "lib/core.d.ts",
+    "lib/model.js",
+    "lib/model.d.ts",
+    "lib/score-ledger.js",
+    "lib/score-ledger.d.ts",
+    "lib/score-command-bindings.js",
+    "lib/score-command-bindings.d.ts",
+    "lib/deletion.js",
+    "lib/deletion.d.ts",
+    "lib/service.js",
+    "lib/service.d.ts",
+    "lib/guild-alias-policy.js",
+    "lib/guild-alias-policy.d.ts",
+    "lib/guild-alias-components.js",
+    "lib/guild-alias-components.d.ts",
+    "lib/mutation-coordinator.js",
+    "lib/mutation-coordinator.d.ts",
+    "lib/plugin.js",
+    "lib/plugin.d.ts",
+    "scripts/score-guild-remap-core.mjs",
+    "scripts/score-guild-remap.mjs",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "nickname",
+    "profile",
+    "score",
+    "identity",
+    "leaderboard"
+  ],
+  "peerDependencies": {
+    "koishi": "^4.18.9"
+  },
+  "devDependencies": {
+    "@koishijs/plugin-database-sqlite": "4.6.0",
+    "@koishijs/plugin-help": "2.4.6",
+    "@types/node": "^20.14.13",
+    "koishi": "4.18.9",
+    "tsx": "^4.16.3",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "koishi": {
+    "description": {
+      "zh": "管理员治理的统一昵称、大小号档案与多积分账本服务，支持全局、平台和群作用域。"
+    },
+    "service": {
+      "required": [
+        "database"
+      ],
+      "optional": [
+        "chatluna",
+        "chatluna_character"
+      ],
+      "implements": [
+        "xpPoints"
+      ]
+    }
+  }
+}
