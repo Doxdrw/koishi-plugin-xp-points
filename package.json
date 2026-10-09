@@ -13,9 +13,6 @@
   },
   "main": "lib/plugin.js",
   "typings": "lib/plugin.d.ts",
-  "bin": {
-    "xp-points-guild-remap": "scripts/score-guild-remap.mjs"
-  },
   "scripts": {
     "test": "node scripts/run-tests.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -90,8 +87,6 @@
     "lib/mutation-coordinator.d.ts",
     "lib/plugin.js",
     "lib/plugin.d.ts",
-    "scripts/score-guild-remap-core.mjs",
-    "scripts/score-guild-remap.mjs",
     "README.md",
     "CHANGELOG.md"
   ],

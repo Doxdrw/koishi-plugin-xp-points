@@ -9,6 +9,7 @@
     "CONTRIBUTING.md",
     "LICENSE",
     "package.json",
+    "package-lock.json",
     "README.md",
     "release.config.json",
     "scripts",
@@ -76,9 +77,7 @@
     "lib/deletion.d.ts",
     "README.md",
     "CHANGELOG.md",
-    "LICENSE",
-    "scripts/score-guild-remap.mjs",
-    "scripts/score-guild-remap-core.mjs"
+    "LICENSE"
   ],
   "packageForbiddenPrefixes": [
     "src/",

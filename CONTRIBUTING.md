@@ -7,7 +7,7 @@
 需要 Node.js 20 或更高版本。提交前请在插件目录运行：
 
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
 npm run build
@@ -16,6 +16,8 @@ npm run package:audit
 ```
 
 行为或账本规则变更应同时添加回归测试，并在 Pull Request 中说明影响的作用域、计分主体、周期成绩或权限。涉及数据处理的改动请说明事务和幂等行为。
+
+修改依赖时使用 npm 更新并提交 `package-lock.json`。Push 和 Pull Request 会运行 Node.js 20/22 检查；创建 GitHub Release 不会发布 npm。正式发布由维护者选择版本标签，手动运行 `publish` 工作流，并通过 `npm` 环境审批。
 
 ## Pull Request
 

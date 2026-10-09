@@ -14,7 +14,7 @@ it('presents one first public release without local database history', () => {
   assert.deepEqual(changelog.match(/^## .+$/gm), [`## ${pkg.version}`])
   for (const path of ['README.md', 'CHANGELOG.md']) {
     const text = readFileSync(join(root, path), 'utf8')
-    assert.doesNotMatch(text, /迁移|legacy|旧版|旧(?:表|库|数据|日志|实例)|账号存储切换|停机备份并/, path)
+    assert.doesNotMatch(text, /迁移|legacy|旧版|旧(?:表|库|数据|日志|实例)|账号存储切换|停机备份并|原有.{0,50}(兼容|继续|短命令)|保留原有/, path)
   }
 })
 
@@ -25,9 +25,11 @@ it('exports only current public tools and keeps local maintenance outside the pu
   assert.ok(!files.some((file: string) => /migration|migrate|legacy-cleanup/.test(file)))
   assert.doesNotMatch(JSON.stringify(pkg.bin ?? {}), /migrate|migration/)
   assert.doesNotMatch(readFileSync(join(root, 'release.config.json'), 'utf8'), /migration|migrate|legacy-cleanup/i)
-  assert.equal(pkg.bin['xp-points-guild-remap'], 'scripts/score-guild-remap.mjs')
-  assert.ok(files.includes('scripts/score-guild-remap.mjs'))
-  assert.ok(files.includes('test/score-guild-remap.test.ts'))
+  assert.deepEqual(pkg.bin ?? {}, {})
+  assert.ok(!pkg.files.some((file: string) => file.startsWith('scripts/')))
+  for (const file of files.filter((file: string) => /\.(?:ts|mjs)$/.test(file))) {
+    assert.doesNotMatch(readFileSync(join(root, file), 'utf8'), /(?:from|import)\s*['"]node:sqlite['"]/, file)
+  }
 })
 
 it('validates optional local-only exclusions without changing the public configuration file', () => {

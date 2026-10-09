@@ -642,7 +642,7 @@ export function apply(ctx: Context, config: Config): void {
     if (!period) return `积分系统 ${systemKey} 没有对应周期；启用前的成绩不会自动补建。`
     return [
       `积分周期详情 ${systemKey}：${periodNames[kind]} ${period.label}`,
-      `起止：${formatPeriodInstant(period.start, period.timeZone)} 至 ${formatPeriodInstant(period.end, period.timeZone)}（${period.timeZone}）`,
+      `起止：${formatPeriodInstant(period.start, period.timeZone)} 至 ${formatPeriodInstant(period.end, period.timeZone)}（${period.timeZone === 'Asia/Shanghai' ? '北京时间，UTC+8' : period.timeZone}）`,
       `状态：${period.incomplete ? '首个或配置变更的不完整周期' : '完整周期'}`,
       `最后修订：${period.revisedAt ? formatPeriodInstant(period.revisedAt, period.timeZone) : '尚无成绩'}`,
     ].join('\n')

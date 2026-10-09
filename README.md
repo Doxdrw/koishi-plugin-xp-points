@@ -10,7 +10,7 @@ Koishi 的统一账号与多积分账本服务。插件提供管理昵称、跨�
 npm install koishi-plugin-xp-points
 ```
 
-启用 `database` 服务后加载插件即可。插件不会替业务插件猜测积分系统；可以在配置中预置系统，也可以由管理员或消费插件创建系统。
+启用 `database` 服务后加载插件即可。积分系统可以在配置中预置，也可以由管理员或消费插件创建。
 
 ## 快速开始
 
@@ -23,7 +23,7 @@ npm install koishi-plugin-xp-points
 积分.排行 event
 ```
 
-`event` 是示例 key，请替换成实际系统 key。发送 `xp` 可以查看按权限显示的命令导航；原有短命令、点号命令和配置中的业务别名继续可用。
+`event` 是示例 key，请替换成实际系统 key。发送 `xp` 可以查看按权限显示的命令导航，也可以直接使用短命令、点号命令和配置中的业务快捷命令。
 
 ## 账号与昵称
 
@@ -78,7 +78,7 @@ npm install koishi-plugin-xp-points
 
 ### 周期竞技榜
 
-累计余额不会清零，竞技成绩按日、周、月、年和赛季分别统计。默认时区为 `Asia/Shanghai`，日榜从当地零点开始，周榜从周一开始，月榜和年榜使用自然周期。常用查询形式为：
+累计余额不会清零，竞技成绩按日、周、月、年和赛季分别统计。默认采用北京时间（UTC+8，IANA 标识为 `Asia/Shanghai`）。日榜从当地零点开始，周榜从周一开始，月榜和年榜使用自然周期。常用查询形式为：
 
 ```text
 积分榜
@@ -87,7 +87,24 @@ npm install koishi-plugin-xp-points
 积分.排行 event 月 2
 ```
 
-原有 `--period`、`--date` 和 `--season` 参数继续兼容。玩家视图只展示榜单内容；管理员可以在 `积分系统.日志` 中查看周期边界、修订和流水详情。
+也可以使用 `--period` 指定周期、`--date` 指定查询日期、`--season` 指定赛季编号。例如：
+
+~~~text
+积分.排行 event --period 月 --date 2026-09-15
+积分.排行 event --period 赛季 --season 2026-09
+~~~
+
+玩家视图展示排名和成绩；管理员可以在 `积分系统.日志` 中查看周期边界、修订和流水详情。
+
+每套积分系统可以在“周期与赛季”配置中指定共同统计时区，例如：
+
+~~~yaml
+scorePeriods:
+  event:
+    timeZone: Europe/London
+~~~
+
+`timeZone` 使用 IANA 时区名称。同一系统的所有榜单按这一时区统计，不同系统可以使用不同地区。时区或赛季规则修改从当前赛季结束后生效；已经保存的周期边界保持固定。
 
 ## 群挂靠
 
@@ -100,7 +117,23 @@ scoreGuildAliases:
       "来源群": "归属群"
 ```
 
-配置变化先通过 `积分系统.群挂靠重映射` 预览，再在原会话粘贴令牌确认。累计余额和周期成绩可以分别选择 `maximum`（逐池取最高）或 `sum`（有符号累加）。`xp-points-guild-remap` 是跨进程维护工具，执行前会要求只读预检、文件备份和确认文本。
+新系统尚无积分记录时，插件直接采用配置中的挂靠关系。已有余额、流水或周期成绩时，管理员按以下步骤应用变更：
+
+1. 备份数据库，在配置页面修改 `scoreGuildAliases` 并保存，使插件加载新配置。
+2. 以 authority 5 权限发送 `积分系统.群挂靠重映射`，查看来源群、归属群及积分变化。
+3. 核对预览，在原会话直接发送完整确认令牌。预览后数据变化或令牌过期时，重新预览。
+
+累计余额和周期成绩可以分别选择 `maximum`（逐池取最高）或 `sum`（包含负分的累加）。省略策略时使用配置的默认值，例如：
+
+~~~text
+积分系统.群挂靠重映射 maximum maximum
+积分系统.群挂靠重映射 sum maximum
+积分系统.群挂靠重映射 --balance sum --period sum
+~~~
+
+取消某个挂靠时，从配置中删除对应来源群；取消某系统全部挂靠时，可移除该系统的映射配置。确认前仍使用已经应用的关系记分。重映射同时处理各计分主体的累计余额和周期成绩，不作为一次新的竞技奖励。
+
+开发者可使用 `getGuildAliasRemapStatus()` 查看配置与已应用关系，使用 `previewGuildAliasRemap(actor, options)` 和 `confirmGuildAliasRemap(token, actor)` 执行同一预览确认流程。`actor` 包含管理员的 `platform`、`userId`、`selfId`、`channelId`；两次调用使用相同操作者与会话，策略选项为 `balanceStrategy` 和 `periodStrategy`。
 
 ## 消费插件接入
 
@@ -138,7 +171,7 @@ await ledger.addAccount({ accountId: identity.accountId }, 1, {
 ## 开发
 
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
 npm run build

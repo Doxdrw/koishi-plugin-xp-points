@@ -170,7 +170,7 @@ describe("xp-points command authority", () => {
     await bot.dispatchMessage('owner', 5, '积分系统.日志 primary --period 月 --date 2026-10-02')
     const detail = bot.output.at(-1) ?? ''
     assert.match(detail, /积分周期详情 primary：月 2026-10/)
-    assert.match(detail, /起止：2026-10-01 00:00 至 2026-11-01 00:00（Asia\/Shanghai）/)
+    assert.match(detail, /起止：2026-10-01 00:00 至 2026-11-01 00:00（北京时间，UTC\+8）/)
     assert.doesNotMatch(detail, /T00:00:00|16:00|最后修订：.*Z/)
   })
   it('groups canonical commands while preserving aliases, permissions and native help', async () => {
