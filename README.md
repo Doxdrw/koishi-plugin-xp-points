@@ -14,16 +14,34 @@ npm install koishi-plugin-xp-points
 
 ## 快速开始
 
-下面的例子创建一个群作用域的活动积分系统，并使用通用命令：
+先确认插件已加载 `database` 服务。普通成员可以查询已存在的系统；创建系统和写入积分需要管理员权限（默认分别为 authority 5 和 authority 2，实际权限以 Koishi 配置为准）。
+
+### 普通成员查询
+
+下面的 `event` 是示例系统 key，请替换成实例中实际存在的 key：
+
+```text
+积分.查询 event @用户
+积分.排行 event
+积分.排行 event 月
+```
+
+### 管理员建立系统并写入积分
+
+下面的命令用于创建一个群作用域的活动积分系统，并给指定账号增加积分：
 
 ```text
 积分系统.创建 event guild 活动积分 分
 积分.增加 event 1 @用户
-积分.查询 event @用户
-积分.排行 event
 ```
 
-`event` 是示例 key，请替换成实际系统 key。发送 `xp` 可以查看按权限显示的命令导航，也可以直接使用短命令、点号命令和配置中的业务快捷命令。
+发送 `xp` 可以查看按权限显示的命令导航，也可以直接使用短命令、点号命令和配置中的业务快捷命令。未配置业务快捷命令时，通用排行命令需要显式写出系统 key；只有绑定了对应系统的快捷命令后，才可以省略 key 使用类似 `积分榜 月` 的形式。
+
+## 文档导航
+
+- 本页：安装、常用命令、账号关系、积分系统和消费插件接入。
+- [贡献指南](CONTRIBUTING.md)：本地检查、Pull Request 和 Issue 信息。
+- [安全策略](SECURITY.md)：隐私数据和安全问题报告方式。
 
 ## 账号与昵称
 
@@ -81,11 +99,18 @@ npm install koishi-plugin-xp-points
 累计余额不会清零，竞技成绩按日、周、月、年和赛季分别统计。默认采用北京时间（UTC+8，IANA 标识为 `Asia/Shanghai`）。日榜从当地零点开始，周榜从周一开始，月榜和年榜使用自然周期。常用查询形式为：
 
 ```text
+积分.排行 event 月 2
+```
+
+如果已经在 `scoreCommandBindings` 中把某个系统绑定到 `积分榜`，也可以使用以下快捷命令：
+
+```text
 积分榜
 积分榜 月
 积分榜 赛季 2
-积分.排行 event 月 2
 ```
+
+未配置该快捷命令时，请使用带系统 key 的 `积分.排行 event ...`。
 
 也可以使用 `--period` 指定周期、`--date` 指定查询日期、`--season` 指定赛季编号。例如：
 
@@ -178,3 +203,7 @@ npm run build
 ```
 
 本仓库使用 MIT License。贡献方式和安全问题报告流程见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [SECURITY.md](SECURITY.md)。
+
+## 支持
+
+使用中遇到可复现的问题，请在 [GitHub Issues](https://github.com/Doxdrw/koishi-plugin-xp-points/issues) 提供插件版本、Koishi/Node.js 版本、最小复现步骤和期望结果。安全问题请按 [安全策略](SECURITY.md) 私下报告，不要公开发布账号、群组、积分明细或令牌。
