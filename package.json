@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-xp-points",
-  "description": "管理员治理的统一身份与多积分账本服务",
+  "description": "统一昵称、大小号与多积分账本，支持 ChatLuna 和 Character 昵称适配",
   "version": "0.2.0",
   "author": "Doxdrw <272593690@qq.com>",
   "repository": {
@@ -120,7 +120,7 @@
   },
   "koishi": {
     "description": {
-      "zh": "管理员治理的统一昵称、大小号档案与多积分账本服务，支持全局、平台和群作用域。"
+      "zh": "统一昵称、大小号与多积分账本服务，支持周期榜及 ChatLuna / Character 昵称适配。"
     },
     "service": {
       "required": [

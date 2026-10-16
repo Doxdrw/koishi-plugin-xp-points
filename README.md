@@ -2,6 +2,13 @@
 
 Koishi 的统一账号与多积分账本服务。插件提供管理昵称、跨平台账号关系、可共享或分账号计分的积分系统、排行榜、周期竞技成绩以及管理员审计工具。它可以独立使用，也可以为其他 Koishi 插件提供 `xpPoints` 服务。
 
+主要能力：
+
+- 统一管理昵称与大小号关系，可供 ChatLuna、ChatLuna Character 在对话中使用管理昵称。
+- 同一真人可按系统共享积分或分账号计分，支持小数、负分和全局／平台／群积分池。
+- 累计榜与日、周、月、年、自定义赛季榜，配合可配置的积分快捷命令。
+- 管理员通过预览和确认处理账号关联、批量改分、群挂靠及删除；开发者通过账本 API 接入。
+
 ## 安装
 
 在 Koishi 插件市场安装 `xp-points`，或在 Koishi 项目目录执行：
@@ -40,12 +47,39 @@ npm install koishi-plugin-xp-points
 ## 文档导航
 
 - 本页：安装、常用命令、账号关系、积分系统和消费插件接入。
-- [贡献指南](CONTRIBUTING.md)：本地检查、Pull Request 和 Issue 信息。
-- [安全策略](SECURITY.md)：隐私数据和安全问题报告方式。
+- [消费插件接入](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/docs/INTEGRATION.md)：记分、账号占用和卸载清理示例。
+- [贡献指南](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/CONTRIBUTING.md)：本地检查、Pull Request 和 Issue 信息。
+- [安全策略](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/SECURITY.md)：隐私数据和安全问题报告方式。
 
 ## 账号与昵称
 
 每个 `(platform, userId)` 对应一个账号，账号可以加入同一个真人档案。真人档案拥有统一管理昵称；账号还可以单独设置标签和显示昵称。账号关系跨积分系统和群生效，积分系统只决定这些账号如何计分。
+
+昵称与账号关系可以在尚未建立积分系统时维护。设置本人或指定用户的统一管理昵称，默认需要 authority 2：
+
+```text
+昵称 新昵称
+设置昵称 新昵称 @用户
+```
+
+### ChatLuna 与 Character 昵称适配
+
+在配置页“昵称适配”中，可分别启用 ChatLuna 和 ChatLuna Character，让它们在对话中使用统一管理昵称，替代默认发言者名称。两项默认关闭，以下片段启用全部群聊中的适配：
+
+```json
+{
+  "nicknameConsumers": {
+    "chatluna": { "enabled": true, "guilds": [], "includePrivate": false },
+    "chatlunaCharacter": { "enabled": true, "guilds": [], "includePrivate": false }
+  }
+}
+```
+
+`guilds` 为空表示全部群聊，填写群号后为白名单；私聊由 `includePrivate` 单独开启。ChatLuna 的普通对话名称和 `{sender_name}` 使用管理昵称，显式指定的消息名称优先。Character 在消息采集时替换用户名称，包括本次采集的历史消息；机器人和任务保持原名。没有可用管理昵称时沿用原名称。
+
+这两项适配使用真人的统一管理昵称；独立积分榜则使用账号自己的显示昵称区分大小号。适配需要对应插件的名称接口可用，接口缺失时会在日志中提示。
+
+### 账号关系与计分方式
 
 常用命令：
 
@@ -84,6 +118,12 @@ npm install koishi-plugin-xp-points
 
 共享模式使用一个计分主体，多个账号看到同一余额；独立模式为每个账号分别计分。独立排行榜保留账号自己的昵称，并在小号后标注所属真人；所有条目仍按分数整体排序。账号关系和计分方式的变更都会检查权限、正在使用的账号以及数据版本。
 
+`账号模式 共享`／`账号模式 独立 -r @承接账号` 同时设置全部现有系统（含停用系统）和未来系统的默认方式；`账号模式 event 独立 -r @承接账号` 只调整 `event`。管理员可用 `-u @账号` 指定他人。共享转独立时，承接账号接收原共享余额，其余账号从零开始；原本已独立的系统保留余额。不同系统采用不同方式是正常设置。
+
+管理员的 `本群大小号`（别名 `大小号管理`）在群聊限本群，私聊默认查看当前平台；只列多账号关系。私聊可用 `-p 平台`、`-g 群号` 缩小范围，或单独使用 `--all-platforms` 查看全部平台。`--all` 包含单账号，`-k 关键词` 搜索，`--pending` 筛选独立计分尚缺主号或账号昵称的组。列表基于本地已知活动和成员记录；`档案维护.扫描成员` 可进行实时成员核对。
+
+`大小号情况 -n "管理昵称"` 可按完整管理昵称查看详情；普通用户查看本人，管理员可查他人。`积分.全部增加 event 1 @用户`、`积分.全部设置 event 10 @用户` 操作的是该真人的全部账号：共享主体只算一次，独立主体分别处理，不是给全群改分。以上批量操作先预览再确认。
+
 ## 积分系统
 
 每个系统创建后固定作用域：
@@ -112,6 +152,16 @@ npm install koishi-plugin-xp-points
 
 未配置该快捷命令时，请使用带系统 key 的 `积分.排行 event ...`。
 
+例如，下面的配置把 `event` 的查询绑定到 `活动积分`、排行绑定到 `积分榜`：
+
+```json
+{
+  "scoreCommandBindings": [
+    { "systemKey": "event", "query": ["活动积分"], "leaderboard": ["积分榜"] }
+  ]
+}
+```
+
 也可以使用 `--period` 指定周期、`--date` 指定查询日期、`--season` 指定赛季编号。例如：
 
 ~~~text
@@ -123,23 +173,50 @@ npm install koishi-plugin-xp-points
 
 每套积分系统可以在“周期与赛季”配置中指定共同统计时区，例如：
 
-~~~yaml
-scorePeriods:
-  event:
-    timeZone: Europe/London
-~~~
+```json
+{
+  "scorePeriods": {
+    "event": { "timeZone": "Europe/London" }
+  }
+}
+```
 
 `timeZone` 使用 IANA 时区名称。同一系统的所有榜单按这一时区统计，不同系统可以使用不同地区。时区或赛季规则修改从当前赛季结束后生效；已经保存的周期边界保持固定。
+
+赛季支持每 N 天（`day`）或 N 个自然月（`month`），并可设置起点。例如从 2026 年 1 月起每三个月一个赛季：
+
+```json
+{
+  "scorePeriods": {
+    "event": {
+      "season": { "unit": "month", "length": 3, "start": "2026-01-01" }
+    }
+  }
+}
+```
+
+### 管理员改分与周期成绩
+
+增加或设置积分默认把余额变化量计入周期竞技成绩：将 8 分设置为 10 分，计入的是 +2 分。`--date YYYY-MM-DD` 将这次变化归到指定历史日期；`--no-competitive` 只调整累计余额：
+
+```text
+积分.增加 event 2 @用户 --date 2026-09-15
+积分.设置 event 10 @用户 --no-competitive
+积分系统.日志 event --period 月 --date 2026-09-15
+```
 
 ## 群挂靠
 
 群作用域系统可以将多个群映射到同一积分池：
 
-```yaml
-scoreGuildAliases:
-  event:
-    onebot:
-      "来源群": "归属群"
+```json
+{
+  "scoreGuildAliases": {
+    "event": {
+      "onebot": { "来源群": "归属群" }
+    }
+  }
+}
 ```
 
 新系统尚无积分记录时，插件直接采用配置中的挂靠关系。已有余额、流水或周期成绩时，管理员按以下步骤应用变更：
@@ -162,32 +239,9 @@ scoreGuildAliases:
 
 ## 消费插件接入
 
-消费插件通过账本句柄写入实际账号：
+消费插件在 `xpPoints` 服务的注入作用域中注册账本句柄，以 `{ accountId }` 指向实际账号；共享或独立主体由本服务定位。绑定 key 与默认系统声明的 key 必须一致。
 
-```ts
-const ledger = ctx.xpPoints.registerScoreConsumer({
-  consumer: 'my-plugin',
-  systemKey: config.scoreSystemKey,
-  defaultSystem: { key: 'event', name: '活动积分', unit: '分', scope: 'guild' },
-})
-
-const identity = await ctx.xpPoints.ensureManagedGuildIdentity(
-  session.platform,
-  session.userId,
-  session.guildId,
-  session.username,
-)
-
-await ledger.addAccount({ accountId: identity.accountId }, 1, {
-  platform: session.platform,
-  guildId: session.guildId,
-  reason: '完成活动',
-  idempotencyKey: `event:${eventId}:${identity.accountId}`,
-  actor: { platform: session.platform, userId: session.userId },
-})
-```
-
-`getAccount`、`addAccount`、`setAccount` 均要求 `{ accountId }`，这样在分账号计分时不会产生目标歧义。消费插件还应为重复请求提供稳定幂等键，并在业务进行期间登记账号占用。
+重复请求沿用同一业务幂等键；活动期间登记账号占用，结束时释放，插件卸载时注销句柄。可直接采用[接入指南中的完整示例](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/docs/INTEGRATION.md)，其中也说明数据删除联动。
 
 ## 隐私与权限
 
@@ -202,8 +256,8 @@ npm test
 npm run build
 ```
 
-本仓库使用 MIT License。贡献方式和安全问题报告流程见 [CONTRIBUTING.md](CONTRIBUTING.md) 与 [SECURITY.md](SECURITY.md)。
+本仓库使用 MIT License。贡献方式和安全问题报告流程见[贡献指南](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/CONTRIBUTING.md)与[安全策略](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/SECURITY.md)。
 
 ## 支持
 
-使用中遇到可复现的问题，请在 [GitHub Issues](https://github.com/Doxdrw/koishi-plugin-xp-points/issues) 提供插件版本、Koishi/Node.js 版本、最小复现步骤和期望结果。安全问题请按 [安全策略](SECURITY.md) 私下报告，不要公开发布账号、群组、积分明细或令牌。
+使用中遇到可复现的问题，请在 [GitHub Issues](https://github.com/Doxdrw/koishi-plugin-xp-points/issues) 提供插件版本、Koishi/Node.js 版本、最小复现步骤和期望结果。安全问题请按[安全策略](https://github.com/Doxdrw/koishi-plugin-xp-points/blob/main/SECURITY.md)私下报告，不要公开发布账号、群组、积分明细或令牌。

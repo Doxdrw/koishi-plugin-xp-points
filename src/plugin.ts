@@ -17,6 +17,12 @@ import type { GuildAliasCombineStrategy } from './guild-alias-policy'
 
 export const name = 'xp-points'
 
+export const usage = `统一管理昵称与大小号关系，管理多套积分账本和周期排行榜。
+
+在“昵称适配”中可分别启用 ChatLuna 与 ChatLuna Character，让对话使用统一管理昵称；支持群白名单和可选私聊适配。
+
+发送 xp 查看命令导航。[使用指南](https://github.com/Doxdrw/koishi-plugin-xp-points#readme)`
+
 export const inject = {
   required: ['database'],
   optional: ['chatluna', 'chatluna_character'],
