@@ -17,7 +17,7 @@ npm run package:audit
 
 行为或账本规则变更应同时添加回归测试，并在 Pull Request 中说明影响的作用域、计分主体、周期成绩或权限。涉及数据处理的改动请说明事务和幂等行为。
 
-修改依赖时使用 npm 更新并提交 `package-lock.json`。Push 和 Pull Request 会运行 Node.js 20/22/24 检查，Node.js 24 检查和发布工作流使用 npm 12.2.0；Node.js 22/24 还会安装并审计实际打包产物。创建 GitHub Release 不会发布 npm。正式发布由维护者选择版本标签，手动运行 `publish` 工作流，并通过 `npm` 环境审批。
+修改依赖时使用 npm 更新并提交 `package-lock.json`。Push 和 Pull Request 会运行 Node.js 20/22/24 检查，Node.js 24 检查和发布工作流使用 npm 12.2.0；Node.js 22/24 还会安装并审计实际打包产物。创建 GitHub Release 不会发布 npm。维护者选择版本标签，手动运行 `publish` 工作流上传 npm stage，再在 npm 审核候选包并以 2FA 批准正式发布。GitHub OIDC 信任应仅允许 `npm stage publish`，不授予直接发布权限。
 
 ## Pull Request
 
