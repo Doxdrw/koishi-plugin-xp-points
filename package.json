@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-xp-points",
   "description": "统一昵称、大小号与多积分账本，支持 ChatLuna 和 Character 昵称适配",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Doxdrw <272593690@qq.com>",
   "repository": {
     "type": "git",
