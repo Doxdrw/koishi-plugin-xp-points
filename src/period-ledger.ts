@@ -55,7 +55,7 @@ export async function configurePeriodsIn(db: Database, systemKey: string, input:
   return { ...policy, revisions: JSON.stringify(kept), revision: policy.revision + 1 }
 }
 
-export async function resolvePeriodIn(db: Database, systemKey: string, kind: ScorePeriodKind, at: number, allowBackfill = false): Promise<PeriodDefinition | undefined> {
+export async function queryPeriodIn(db: Database, systemKey: string, kind: ScorePeriodKind, at: number, allowBackfill = false): Promise<PeriodDefinition | undefined> {
   const policy = (await db.get('xp_period_policy', { systemKey }))[0]
   if (!policy) return
   const fixed = (await db.get('xp_period_definition', { systemKey, kind, start: { $lte: at }, end: { $gt: at } }, { sort: { start: 'desc' }, limit: 1 }))[0]
@@ -71,8 +71,23 @@ export async function resolvePeriodIn(db: Database, systemKey: string, kind: Sco
   const id = createHash('sha256').update(JSON.stringify([systemKey, kind, start, end, revision.config.timeZone])).digest('hex')
   const existing = (await db.get('xp_period_definition', { id }))[0]
   if (existing) return existing
-  return db.create('xp_period_definition', { id, systemKey, kind, start, end, label: window.label,
-    timeZone: revision.config.timeZone, incomplete: policy.enabledAt > start || start !== window.start || end !== window.end, revisedAt: 0 })
+  return { id, systemKey, kind, start, end, label: window.label,
+    timeZone: revision.config.timeZone, incomplete: policy.enabledAt > start || start !== window.start || end !== window.end, revisedAt: 0 }
+}
+
+export async function resolvePeriodIn(db: Database, systemKey: string, kind: ScorePeriodKind, at: number, allowBackfill = false): Promise<PeriodDefinition | undefined> {
+  const period = await queryPeriodIn(db, systemKey, kind, at, allowBackfill)
+  if (!period) return
+  return (await db.get('xp_period_definition', { id: period.id }))[0]
+    ?? db.create('xp_period_definition', period)
+}
+
+/** Walk actual calendar/revision boundaries, including empty periods. No writes. */
+export async function queryPreviousPeriodIn(db: Database, systemKey: string, kind: ScorePeriodKind, at: number, offset = 0) {
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > 120) throw new Error('历史周期偏移须为0至120的整数。')
+  let period = await queryPeriodIn(db, systemKey, kind, at)
+  for (let index = 0; index < offset && period; index++) period = await queryPeriodIn(db, systemKey, kind, period.start - 1)
+  return period
 }
 
 export async function recordCompetitiveIn(db: Database, input: {

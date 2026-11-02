@@ -139,7 +139,8 @@ describe("xp-points command authority", () => {
     const rows = await app.database.get('xp_period_score', {})
     assert.ok(rows.every(r => r.value < 100))
   })
-  it('accepts positional periods for business and canonical leaderboards while keeping player output concise', async () => {
+  it('accepts positional periods for business and canonical leaderboards while keeping player output concise', async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-15T12:00:00+08:00') })
     const app = new App({ autoAssign: true, autoAuthorize: 1 })
     app.plugin(SQLiteDriver, { path: ':memory:' })
     app.plugin(xpPoints, pluginConfig({
@@ -173,6 +174,29 @@ describe("xp-points command authority", () => {
     assert.match(detail, /起止：2026-10-01 00:00 至 2026-11-01 00:00（北京时间，UTC\+8）/)
     assert.doesNotMatch(detail, /T00:00:00|16:00|最后修订：.*Z/)
   })
+  it('queries previous periods and short options through real commands without creating period definitions', async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-01-01T12:00:00+08:00') })
+    const app = new App({ autoAssign: true, autoAuthorize: 1 })
+    app.plugin(SQLiteDriver, { path: ':memory:' })
+    app.plugin(xpPoints, pluginConfig({ bindings: [{ ...primaryBindings[0], leaderboard: ['积分榜'] }] }))
+    const bot = new AuthorityBot(app)
+    await app.start(); apps.push(app); bot.online()
+    t.mock.timers.setTime(Date.parse('2026-03-10T12:00:00+08:00'))
+    await bot.dispatchMessage('admin', 2, '增加活动分 7 @winner --date 2026-03-03')
+    await bot.dispatchMessage('admin', 2, '增加活动分 9 @older --date 2026-02-17')
+    const definitions = await app.database.get('xp_period_definition', {})
+    for (const command of ['积分榜 上周', '积分.排行 primary 周 前1期', '积分榜 -p 周 -d 2026-03-03', '积分榜 --period 周 --date 2026-03-03', '积分榜 -p 赛季 -s 2026-03']) {
+      await bot.dispatchMessage('reader', 1, command)
+      assert.match(bot.output.at(-1) ?? '', /winner 7分/, command)
+      assert.doesNotMatch(bot.output.at(-1) ?? '', /起止|修订|时区/)
+    }
+    await bot.dispatchMessage('reader', 1, '积分榜 前2周')
+    assert.match(bot.output.at(-1) ?? '', /前2周榜[\s\S]*暂无竞技成绩/)
+    await bot.dispatchMessage('owner', 5, '积分系统.日志 primary 上周')
+    assert.match(bot.output.at(-1) ?? '', /起止：2026-03-02 00:00 至 2026-03-09 00:00/)
+    assert.deepEqual(await app.database.get('xp_period_definition', {}), definitions)
+  })
+
   it('groups canonical commands while preserving aliases, permissions and native help', async () => {
     const app = new App({ autoAssign: true, autoAuthorize: 1 })
     app.plugin(help); app.plugin(SQLiteDriver, { path: ':memory:' }); app.plugin(xpPoints, pluginConfig())

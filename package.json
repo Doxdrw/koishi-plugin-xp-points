@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-xp-points",
   "description": "统一昵称、大小号与多积分账本，支持 ChatLuna 和 Character 昵称适配",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "author": "Doxdrw <272593690@qq.com>",
   "repository": {
     "type": "git",
@@ -25,6 +25,8 @@
     "lib/errors.d.ts",
     "lib/period-calendar.js",
     "lib/period-calendar.d.ts",
+    "lib/period-selector.js",
+    "lib/period-selector.d.ts",
     "lib/period-model.js",
     "lib/period-model.d.ts",
     "lib/period-ledger.js",

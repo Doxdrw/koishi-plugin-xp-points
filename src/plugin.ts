@@ -1,5 +1,6 @@
 import { Command, Context, Schema, Session, h } from 'koishi'
 import { safeErrorSummary } from './errors'
+import { parseLeaderboardQuery, type PeriodQueryOptions } from './period-selector'
 import { registerAccountModels } from './account-model'
 import { accountDetailPage, registerAccountCommands } from './account-commands'
 import { assertXpCommandNamesAvailable, createXpCommandTree, xpReservedCommands } from './command-catalog'
@@ -215,27 +216,7 @@ function scoreContext(session: Session) {
 
 const periodKinds = { 日: 'day', 周: 'week', 月: 'month', 年: 'year', 赛季: 'season', day: 'day', week: 'week', month: 'month', year: 'year', season: 'season' } as const
 const periodNames = { day: '日', week: '周', month: '月', year: '年', season: '赛季' } as const
-type LeaderboardOptions = { period?: string; date?: string; season?: string }
-
-function parseLeaderboardPosition(periodOrPage: string | undefined, page: number | undefined, options: LeaderboardOptions = {}) {
-  const parsed: LeaderboardOptions = { ...options }
-  let parsedPage = page ?? 1
-  if (periodOrPage !== undefined) {
-    if (/^\d+$/.test(periodOrPage)) {
-      if (page !== undefined) throw new XpPointsUserError('页码只能指定一次。')
-      parsedPage = Number(periodOrPage)
-    } else {
-      if (page === undefined) parsedPage = 1
-      if (parsed.period && parsed.period !== periodOrPage) throw new XpPointsUserError('位置参数与 --period 不能同时指定不同周期。')
-      parsed.period = periodOrPage
-    }
-  }
-  if (!Number.isSafeInteger(parsedPage) || parsedPage < 1) throw new XpPointsUserError('页码必须是正整数。')
-  if (parsed.period && parsed.period !== '累计' && parsed.period !== 'total' && !periodKinds[parsed.period as keyof typeof periodKinds]) {
-    throw new XpPointsUserError('周期请用日、周、月、年、赛季或累计。')
-  }
-  return { page: parsedPage, options: parsed }
-}
+type LeaderboardOptions = PeriodQueryOptions
 
 function formatPeriodInstant(value: number, timeZone: string): string {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
@@ -460,12 +441,14 @@ export function apply(ctx: Context, config: Config): void {
       const kind = periodKinds[options.period as keyof typeof periodKinds]
       if (!kind) throw new XpPointsUserError('周期请用日、周、月、年、赛季或累计。')
       const result = await commands.xpPoints.getPeriodLeaderboard(systemKey, scoreContext(session), {
-        kind, page, ...(options.date ? { at: await commands.xpPoints.parseScoreDate(systemKey, options.date) } : {}), season: options.season })
-      if (!result.period) return `${definition.name}没有对应周期，启用前的成绩不会自动补建。`
+        kind, page, ...(options.date ? { at: await commands.xpPoints.parseScoreDate(systemKey, options.date) } : {}), season: options.season, offset: options.offset })
+      if (!result.period) return `${definition.name}暂无对应周期记录。`
       const lines = result.entries.map(e => `${e.rank}. ${e.nickname} ${e.value}${definition.unit}${e.inactive ? '（已停用）' : ''}`)
       const rows: string[] = [], count = config.leaderboardEntriesPerLine ?? 3
       for (let i = 0; i < lines.length; i += count) rows.push(lines.slice(i, i + count).join('  '))
-      const periodName = periodNames[kind]
+      const periodName = options.offset === 1
+        ? ({ day: '昨日', week: '上周', month: '上月', year: '去年', season: '上赛季' } as const)[kind]
+        : options.offset ? `前${options.offset}${periodNames[kind]}` : periodNames[kind]
       return h.text(`${definition.name}${periodName}榜（第 ${page}/${result.totalPages} 页，共 ${result.total} 条）`
         + (result.period.incomplete ? '（首个周期不完整）' : '')
         + `\n${rows.join('\n') || '暂无竞技成绩。'}`).toString()
@@ -506,14 +489,14 @@ export function apply(ctx: Context, config: Config): void {
       return runCommand(commands, '查询积分', () => queryScore(session, system, target))
     })
 
-  const rankingCommand = registerCommand('积分.排行 <system:string> [periodOrPage:string] [page:posint]')
-    .option('period', '--period <period:string> 累计/日/周/月/年/赛季')
-    .option('date', '--date <date:string> 查询历史日期')
-    .option('season', '--season <season:string> 查询已记录赛季编号')
-    .action(async ({ session, options }, system, periodOrPage, page) => {
+  const rankingCommand = registerCommand('积分.排行 <system:string> [query:text]')
+    .option('period', '-p <period:string> 累计/日/周/月/年/赛季')
+    .option('date', '-d <date:string> 查询历史日期')
+    .option('season', '-s <season:string> 查询已记录赛季编号')
+    .action(async ({ session, options }, system, query) => {
       if (!system?.trim()) return h.text('用法：积分.排行 <系统 key> [周期|页码] [页码] [--period 日|周|月|年|赛季]\n示例：积分.排行 event 月；积分.排行 event 月 2；积分.排行 event --period 月').toString()
       return runCommand(commands, '查询积分榜', async () => {
-        const parsed = parseLeaderboardPosition(periodOrPage, page, options)
+        const parsed = parseLeaderboardQuery(query, options)
         return renderLeaderboard(session, system, parsed.page, parsed.options)
       })
     })
@@ -566,12 +549,12 @@ export function apply(ctx: Context, config: Config): void {
         .action(async ({ session }, target) => runCommand(commands, `执行${command}`,
           () => queryScore(session, systemKey, target)))
     } else if (binding.action === 'leaderboard') {
-      registerCommand(`${command} [periodOrPage:string] [page:posint]`)
-        .option('period', '--period <period:string> 累计/日/周/月/年/赛季')
-        .option('date', '--date <date:string> 查询历史日期')
-        .option('season', '--season <season:string> 查询已记录赛季编号')
-        .action(async ({ session, options }, periodOrPage, page) => runCommand(commands, `执行${command}`, async () => {
-          const parsed = parseLeaderboardPosition(periodOrPage, page, options)
+      registerCommand(`${command} [query:text]`)
+        .option('period', '-p <period:string> 累计/日/周/月/年/赛季')
+        .option('date', '-d <date:string> 查询历史日期')
+        .option('season', '-s <season:string> 查询已记录赛季编号')
+        .action(async ({ session, options }, query) => runCommand(commands, `执行${command}`, async () => {
+          const parsed = parseLeaderboardQuery(query, options)
           return renderLeaderboard(session, systemKey, parsed.page, parsed.options)
         }))
     } else if (binding.action === 'setSelf') {
@@ -644,7 +627,7 @@ export function apply(ctx: Context, config: Config): void {
     const kind = periodKinds[periodName as keyof typeof periodKinds]
     if (!kind) throw new XpPointsUserError('周期请用日、周、月、年、赛季或累计。')
     const at = options.date ? await commands.xpPoints.parseScoreDate(systemKey, options.date) : undefined
-    const period = await commands.xpPoints.getPeriodDefinition(systemKey, { kind, at, season: options.season })
+    const period = await commands.xpPoints.getPeriodWindow(systemKey, { kind, at, season: options.season, offset: options.offset })
     if (!period) return `积分系统 ${systemKey} 没有对应周期；启用前的成绩不会自动补建。`
     return [
       `积分周期详情 ${systemKey}：${periodNames[kind]} ${period.label}`,
@@ -709,18 +692,19 @@ export function apply(ctx: Context, config: Config): void {
         return `积分系统 ${system.key} 已停用。`
       })
     })
-  registerCommand('积分系统.日志 <key:string> [page:posint]', { authority: 5 })
-    .option('period', '--period <period:string> 周期详情：累计/日/周/月/年/赛季')
-    .option('date', '--date <date:string> 周期详情查询日期')
-    .option('season', '--season <season:string> 周期详情查询赛季编号')
-    .action(async ({ options }, key, page) => {
+  registerCommand('积分系统.日志 <key:string> [query:text]', { authority: 5 })
+    .option('period', '-p <period:string> 周期详情：累计/日/周/月/年/赛季')
+    .option('date', '-d <date:string> 周期详情查询日期')
+    .option('season', '-s <season:string> 周期详情查询赛季编号')
+    .action(async ({ options }, key, query) => {
       if (!key) return h.text('用法：积分系统.日志 <系统 key> [页码]\n周期详情：积分系统.日志 <系统 key> --period 日|周|月|年|赛季|累计 [--date YYYY-MM-DD] [--season 编号]').toString()
       return runCommand(commands, '查询积分日志', async () => {
-        if (options.period || options.date || options.season) {
-          if (page !== undefined) throw new XpPointsUserError('周期详情不需要日志页码。')
-          return renderPeriodAudit(key, options)
+        const parsed = parseLeaderboardQuery(query, options)
+        if (parsed.options.period || parsed.options.date || parsed.options.season) {
+          if (parsed.page !== 1 || /^\d+$/u.test(query?.trim() ?? '')) throw new XpPointsUserError('周期详情不需要日志页码。')
+          return renderPeriodAudit(key, parsed.options)
         }
-        const result = await commands.xpPoints.getScoreJournalPage(key, { page })
+        const result = await commands.xpPoints.getScoreJournalPage(key, { page: parsed.page })
         const lines = result.entries.map(row =>
           `#${row.id} 档案#${row.profileId} ${row.before} → ${row.after}（${row.source}：${row.reason}）`)
         return [

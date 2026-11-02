@@ -5,7 +5,7 @@ import { Bot, Context, Service, $ } from 'koishi'
 import { SubjectWriteCoordinator } from './mutation-coordinator'
 import { AccountLifecycleStore, type AccountDefaults } from './account-lifecycle'
 import { AccountOperations } from './account-operations'
-import { configurePeriodsIn, resolvePeriodIn, periodDateIn } from './period-ledger'
+import { configurePeriodsIn, resolvePeriodIn, periodDateIn, queryPreviousPeriodIn } from './period-ledger'
 import type { ScorePeriodConfig, ScorePeriodKind } from './period-calendar'
 import type { PeriodDefinition } from './period-model'
 import { AccountQueryStore } from './account-queries'
@@ -1130,27 +1130,39 @@ export class XpPointsService extends Service {
   }
 
   async getPeriodLeaderboard(systemKey: string, context: Omit<ScoreOperationContext, 'reason'>,
-    options: { kind: ScorePeriodKind; at?: number; season?: string; page?: number; pageSize?: number }) {
+    options: { kind: ScorePeriodKind; at?: number; season?: string; offset?: number; page?: number; pageSize?: number }) {
     await this.requireScoreSystem(systemKey)
     const page = options.page ?? 1, pageSize = options.pageSize ?? this.config.leaderboardPageSize ?? 50
     if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 200) throw new XpPointsUserError('周期榜页码或每页条数无效。')
     const at = options.at ?? Date.now()
     if (!Number.isFinite(at) || at > Date.now()) throw new XpPointsUserError('只能查询当前或过去的周期成绩。')
-    const period = await this.serializeMutation(() => this.ctx.database.transact(async db => {
-      await db.get('xp_period_policy', { systemKey })
-      if (options.season) {
-        if (options.kind !== 'season') throw new XpPointsUserError('赛季编号仅用于赛季榜。')
-        return (await db.get('xp_period_definition', { systemKey, kind: 'season', label: options.season }, { sort: { start: 'desc' }, limit: 1 }))[0]
-      }
-      return resolvePeriodIn(db, systemKey, options.kind, at)
-    }))
-    const entries = period ? await this.accountQueries.leaderboardEntries(systemKey, context,
+    const period = await this.getPeriodWindow(systemKey, options)
+    // A read-only calendar query may describe an empty, never-written period.
+    // The account query validates persisted IDs; do not materialize an empty
+    // definition merely to satisfy that check.
+    const stored = period && (await this.ctx.database.get('xp_period_definition', { id: period.id, systemKey }))[0]
+    const entries = stored ? await this.accountQueries.leaderboardEntries(systemKey, context,
       { inactivePolicy: this.config.leaderboardInactivePolicy, periodId: period.id }) : []
     let rank = 0
     const ranked = entries.map((row, index) => { if (!index || row.value !== entries[index - 1].value) rank = index + 1; return { ...row, rank } })
     const totalPages = Math.max(1, Math.ceil(entries.length / pageSize))
     if (page > totalPages) throw new XpPointsUserError(`周期榜只有${totalPages}页。`)
     return { period, entries: ranked.slice((page - 1) * pageSize, page * pageSize), total: entries.length, page, pageSize, totalPages }
+  }
+  /** Read-only period boundaries for rankings and consumer statistics. */
+  async getPeriodWindow(systemKey: string, options: { kind: ScorePeriodKind; at?: number; season?: string; offset?: number }): Promise<PeriodDefinition | undefined> {
+    await this.requireScoreSystem(systemKey, true)
+    const at = options.at ?? Date.now(), offset = options.offset ?? 0
+    if (!Number.isFinite(at) || at > Date.now()) throw new XpPointsUserError('只能查询当前或过去的周期。')
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > 120) throw new XpPointsUserError('最多查询前120期。')
+    if (offset && (options.at !== undefined || options.season)) throw new XpPointsUserError('相对周期不能与日期或赛季编号同时使用。')
+    return this.serializeMutation(() => this.ctx.database.transact(async db => {
+      if (options.season) {
+        if (options.kind !== 'season') throw new XpPointsUserError('赛季编号仅用于赛季查询。')
+        return (await db.get('xp_period_definition', { systemKey, kind: 'season', label: options.season }, { sort: { start: 'desc' }, limit: 1 }))[0]
+      }
+      return queryPreviousPeriodIn(db, systemKey, options.kind, at, offset)
+    }))
   }
   async getPeriodDefinition(systemKey: string, options: { kind: ScorePeriodKind; at?: number; season?: string }): Promise<PeriodDefinition | undefined> {
     await this.requireScoreSystem(systemKey, true)

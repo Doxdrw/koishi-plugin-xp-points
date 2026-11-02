@@ -6,7 +6,7 @@ import { registerModels } from '../src/model'
 import { registerAccountModels } from '../src/account-model'
 import { AccountLifecycleStore } from '../src/account-lifecycle'
 import { SubjectLedgerStore, SubjectWriteCoordinator } from '../src/subject-ledger'
-import { configurePeriodsIn, resolvePeriodIn } from '../src/period-ledger'
+import { configurePeriodsIn, resolvePeriodIn, queryPreviousPeriodIn } from '../src/period-ledger'
 import { PersonAssociationStore } from '../src/account-association'
 import { AccountModeStore } from '../src/account-mode'
 import { randomUUID } from 'node:crypto'
@@ -29,6 +29,39 @@ async function fixture() {
   return { app, writes, store, person, context, lifecycle }
 }
 const scoreValues = async (app: App) => (await app.database.get('xp_period_score', {})).map(r => r.value)
+it('queries empty previous periods without persisting definitions or skipping them', async () => {
+  const { app } = await fixture()
+  const at = Date.parse('2026-03-10T12:00:00+08:00')
+  const week = await queryPreviousPeriodIn(app.database, 'event', 'week', at, 1)
+  assert.equal(week?.start, Date.parse('2026-03-02T00:00:00+08:00'))
+  assert.equal(week?.end, Date.parse('2026-03-09T00:00:00+08:00'))
+  assert.equal((await app.database.get('xp_period_definition', {})).length, 0)
+  assert.equal((await app.database.get('xp_period_score', {})).length, 0)
+  assert.equal(await queryPreviousPeriodIn(app.database, 'event', 'week', Date.parse('2026-01-12T12:00:00+08:00'), 2), undefined)
+})
+
+it('walks timezone calendar boundaries rather than fixed elapsed weeks', async () => {
+  const { app } = await fixture()
+  await configurePeriodsIn(app.database, 'dst', { timeZone: 'America/New_York' }, Date.parse('2026-01-01T12:00:00Z'))
+  const week = await queryPreviousPeriodIn(app.database, 'dst', 'week', Date.parse('2026-03-10T12:00:00Z'), 1)
+  assert.equal(week?.start, Date.parse('2026-03-02T05:00:00Z'))
+  assert.equal(week?.end, Date.parse('2026-03-09T04:00:00Z'))
+  assert.equal(week!.end - week!.start, 167 * 3600_000)
+})
+
+it('uses the effective historical season policy when walking across a revision', async () => {
+  const { app } = await fixture()
+  const january = Date.parse('2026-01-20T00:00:00+08:00')
+  const fixed = await resolvePeriodIn(app.database, 'event', 'season', january)
+  await configurePeriodsIn(app.database, 'event', { season: { unit: 'day', length: 14, start: '2026-02-01' } }, january)
+  const at = Date.parse('2026-03-02T12:00:00+08:00')
+  const third = await queryPreviousPeriodIn(app.database, 'event', 'season', at, 3)
+  assert.equal(third?.id, fixed?.id)
+  assert.equal(third?.label, '2026-01')
+  assert.equal((await app.database.get('xp_period_definition', {})).length, 1)
+  await assert.rejects(queryPreviousPeriodIn(app.database, 'event', 'week', at, 121), /0至120/)
+})
+
 it('records cumulative delta and all five period results in one transaction without clearing the balance', async () => {
   const { app, store, person, context } = await fixture(), target = { accountId: person.account.id }
   await store.add('event', target, 2.5, { ...context, idempotencyKey: 'one' })
